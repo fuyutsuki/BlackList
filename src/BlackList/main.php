@@ -2,19 +2,16 @@
 
 namespace BlackList;
 
-use pocketmine\Server;
 use pocketmine\Player;
 use pocketmine\plugin\PluginBase;
 use pocketmine\utils\Config;
 use pocketmine\event\Listener;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\command\CommandExecuter;
-use pocketmine\command\ConsoleCommandSender;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 
-class main extends PluginBase implements Listener{
+class main extends PluginBase implements Listener {
     
     public function onEnable(){
         if(!file_exists($this->getDataFolder())){
@@ -23,8 +20,8 @@ class main extends PluginBase implements Listener{
         $this->blacklist = new Config($this->getDataFolder() . "blacklist.yml", Config::YAML);
         $this->blackreason = new Config($this->getDataFolder() . "blackreason.yml", Config::YAML);
         $this->blacktime = new Config($this->getDataFolder() . "blacktime.yml", Config::YAML);
-	$this->blacklasttime = new Config($this->getDataFolder() . "blacklasttime.yml", Config::YAML);
-	$this->blackip = new Config($this->getDataFolder() . "blackip.yml", Config::YAML);
+	    $this->blacklasttime = new Config($this->getDataFolder() . "blacklasttime.yml", Config::YAML);
+	    $this->blackip = new Config($this->getDataFolder() . "blackip.yml", Config::YAML);
         $this->permission = new Config($this->getDataFolder() . "permission.yml", Config::YAML);
         $this->getServer()->getPluginManager()->registerEvents($this,$this); 
     } 
@@ -32,51 +29,41 @@ class main extends PluginBase implements Listener{
     public function onPlayerJoin(PlayerJoinEvent $event){
         $player = $event->getPlayer();
         $name = $player->getName();
-        if($this->blacklist->exists($name)){
-	    $this->blackip->set($name,$player->getAddress());
-	    $this->blackip->save();
-            foreach($this->getServer()->getOnlinePlayers() as $players){
-                if($players->isOp() || $this->permission->exists($players->getName())){
-                   $players->sendMessage("§l§6<staff>§fブラックリストの §e{$name} がサーバーに参加しました。");  
-                }
-            }
-	    return true;
-        }
+        $address = $player->getAddress();
 
-        if($player->isOp() || $this->permission->exists($player->getName())){
-            foreach($this->getServer()->getOnlinePlayers() as $players){
-                if($this->blacklist->exists($players->getName())){
-                    $player->sendMessage("§l§6<staff>§fブラックリストの §e{$players->getName()} がオンラインです。");
+        if ($this->blacklist->exists($name)) {
+            $this->blackip->set($name, $address);
+            $this->blackip->save();
+            // opか権限を持ったプレイヤーにメッセージを送信
+            foreach ($this->getServer()->getOnlinePlayers() as $onlinePlayer) {
+                if ($onlinePlayer->isOp() || $this->permission->exists($onlinePlayer->getName())) {
+                    $onlinePlayer->sendMessage("§l§6<staff>§fブラックリストの §e{$name} がサーバーに参加しました。");
                 }
             }
-	    return true;
+        }else {// ブラックリストに載っていない場合
+        	$blackAddress = $this->blackip->getAll(true);// 例: ["192.168.0.1"]みたいにkeyだけの配列を取得
+        	if (array_key_exists($address, $blackAddress)) {
+            	foreach ($this->getServer()->getOnlinePlayers() as $onlinePlayer) {
+              	    if ($onlinePlayer->isOp() || $this->permission->exists($onlinePlayer->getName())) {
+               	     	$onlinePlayer->sendMessage("§l§6<staff>§fブラックリストの{$this->blackip->get($address)}のサブ垢 §e{$name} がサーバーに参加しました。");
+               	 	}
+            	}
+        	}
         }
-	    
-	foreach($this->blackip->getAll() as $key=>$value){
-		if($player->getAddress() == $value){
-			foreach($this->getServer()->getOnlinePlayers() as $players){
-				if($players->isOp() || $this->permission->exists($players->getName())){
-					$players->sendMessage("§l§6<staff>§fブラックリストの{$key}のサブ垢 §e{$name} がサーバーに参加しました。");
-				}
-			}
-		}
-	}
-	return true;
     }
     
     public function onPlayerQuit(PlayerQuitEvent $event){
         $player = $event->getPlayer();
         $name = $player->getName();
-	$time = date("Y年n月j日G時i分");
+	    $time = date("Y年n月j日G時i分");
         if($this->blacklist->exists($name)){
-	    $this->blacklasttime->set($name,$time);
-	    $this->blacklasttime->save();
+	        $this->blacklasttime->set($name,$time);
+	        $this->blacklasttime->save();
             foreach($this->getServer()->getOnlinePlayers() as $players){
                 if($players->isOp() || $this->permission->exists($players->getName())){
-                   $players->sendMessage("§l§6<staff>§fブラックリストの §e{$name} がサーバーを退出しました。");
+                    $players->sendMessage("§l§6<staff>§fブラックリストの §e{$name} がサーバーを退出しました。");
                 }
             }
-	    return true;
         }
     }
 	
